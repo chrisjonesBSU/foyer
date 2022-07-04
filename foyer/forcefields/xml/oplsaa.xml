@@ -3332,7 +3332,7 @@
   <Atom type="opls_201" charge="-0.47" sigma="0.37" epsilon="1.046"/>
   <Atom type="opls_202" charge="-0.335" sigma="0.36" epsilon="1.48532"/>
   <Atom type="opls_203" charge="-0.217" sigma="0.355" epsilon="1.046"/>
-  <Atom type="opls_204" charge="0.155" sigma="1.0" epsilon="0.0"/>
+  <Atom type="opls_204" charge="0.155" sigma="0.0" epsilon="0.0"/>
   <Atom type="opls_205" charge="0.235" sigma="1.0" epsilon="0.0"/>
   <Atom type="opls_206" charge="0.06" sigma="0.35" epsilon="0.276144"/>
   <Atom type="opls_207" charge="0.12" sigma="0.35" epsilon="0.276144"/>

@@ -1159,7 +1159,7 @@ class Forcefield(app.ForceField):
 
         # Execute scripts found in the XML files.
         for script in self._scripts:
-            exec(script, locals())
+            exec(script, locals())  # noqa: S102
 
         return sys
 

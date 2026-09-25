@@ -41,8 +41,8 @@ class Validator:
                 preprocessed_ff_file_name, validation=False
             ).parser
         finally:
-            for ff_file_name in preprocessed_ff_file_name:
-                os.remove(ff_file_name)
+            for _ff_file_name in preprocessed_ff_file_name:
+                os.remove(_ff_file_name)
 
         self.validate_smarts(debug=debug)
         self.validate_overrides()

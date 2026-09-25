@@ -133,11 +133,8 @@ class TestForcefield(BaseTest):
         mol2 = mb.load(get_fn("ethane.mol2"))
         oplsaa.apply(mol2, references_file="ethane.bib")
         assert os.path.isfile("ethane.bib")
-        with open(get_fn("ethane.bib")) as file1:
-            with open("ethane.bib") as file2:
-                diff = list(
-                    difflib.unified_diff(file1.readlines(), file2.readlines(), n=0)
-                )
+        with open(get_fn("ethane.bib")) as file1, open("ethane.bib") as file2:
+            diff = list(difflib.unified_diff(file1.readlines(), file2.readlines(), n=0))
         assert not diff
 
     @pytest.mark.skipif(not has_mbuild, reason="mbuild is not installed")
@@ -286,8 +283,8 @@ class TestForcefield(BaseTest):
         ethane *= 2
         map_with = oplsaa.run_atomtyping(ethane, use_residue_map=True)
         map_without = oplsaa.run_atomtyping(ethane, use_residue_map=False)
-        assert all([a["atomtype"] for a in map_with.values()])
-        assert all([a["atomtype"] for a in map_without.values()])
+        assert all(a["atomtype"] for a in map_with.values())
+        assert all(a["atomtype"] for a in map_without.values())
         struct_with = ethane
         struct_without = ethane
         oplsaa._apply_typemap(struct_with, map_with)
@@ -395,7 +392,7 @@ class TestForcefield(BaseTest):
             ethane = oplsaa_with_typo.apply(ethane)
         with caplog.at_level(logging.INFO, logger="foyer"):
             ethane = oplsaa_with_typo.apply(ethane, **kwargs)
-        if "angle" in list(kwargs.keys())[0]:
+        if "angle" in next(iter(kwargs.keys())):
             assert "Parameters have not been assigned to all angles" in caplog.text
         else:  # dihedrals missing
             assert (
@@ -625,8 +622,8 @@ class TestForcefield(BaseTest):
         from_xml_ff = Forcefield(forcefield_files=[get_fn("lj.xml"), get_fn("lj2.xml")])
         assert isinstance(from_xml_ff.version, list)
         assert isinstance(from_xml_ff.name, list)
-        assert all([x in from_xml_ff.version for x in ["0.4.1", "4.8.2"]])
-        assert all([x in from_xml_ff.name for x in ["JL", "LJ"]])
+        assert all(x in from_xml_ff.version for x in ["0.4.1", "4.8.2"])
+        assert all(x in from_xml_ff.name for x in ["JL", "LJ"])
 
         with pytest.raises(FoyerError):
             Forcefield(forcefield_files=[get_fn("lj.xml"), get_fn("lj3.xml")])
@@ -660,8 +657,8 @@ class TestForcefield(BaseTest):
         for res_id, res in enumerate(structure.residues):
             all_substructures.append(_structure_from_residue(res, structure))
 
-        residue_idx_per_atom = map(lambda x: x.residue.idx, structure.atoms)
-        num_unique_residue_indices = len(set([*residue_idx_per_atom]))
+        residue_idx_per_atom = (x.residue.idx for x in structure.atoms)
+        num_unique_residue_indices = len({*residue_idx_per_atom})
         num_residues = len(structure.residues)
 
         assert num_residues == num_unique_residue_indices

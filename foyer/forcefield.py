@@ -104,7 +104,7 @@ def preprocess_forcefield_files(forcefield_files=None):
                             * len(
                                 [
                                     attr_name
-                                    for attr_name in child.keys()
+                                    for attr_name in child.keys()  # noqa: SIM118
                                     if "type" in attr_name
                                 ]
                             )
@@ -167,7 +167,7 @@ def generate_topology(non_omm_topology, non_element_types=None, residues=None):
 def _structure_from_residue(residue, parent_structure):
     """Convert a ParmEd Residue to an equivalent Structure."""
     structure = pmd.Structure()
-    orig_to_copy = dict()  # Clone a lot of atoms to avoid any of parmed's tracking
+    orig_to_copy = {}  # Clone a lot of atoms to avoid any of parmed's tracking
     for atom in residue.atoms:
         new_atom = copy(atom)
         new_atom._idx = atom.idx
@@ -186,13 +186,13 @@ def _structure_from_residue(residue, parent_structure):
 def _topology_from_parmed(structure, non_element_types):
     """Convert a ParmEd Structure to an OpenMM Topology."""
     topology = app.Topology()
-    residues = dict()
+    residues = {}
     for pmd_residue in structure.residues:
         chain = topology.addChain()
         omm_residue = topology.addResidue(pmd_residue.name, chain)
         # Index ParmEd residues on name & number, no other info i.e. chain
         residues[(pmd_residue.name, pmd_residue.idx)] = omm_residue
-    atoms = dict()  # pmd.Atom: omm.Atom
+    atoms = {}  # pmd.Atom: omm.Atom
 
     for pmd_atom in structure.atoms:
         name = pmd_atom.name
@@ -244,7 +244,7 @@ def _topology_from_residue(res):
     chain = topology.addChain()
     new_res = topology.addResidue(res.name, chain)
 
-    atoms = dict()  # { omm.Atom in res : omm.Atom in *new* topology }
+    atoms = {}  # { omm.Atom in res : omm.Atom in *new* topology }
 
     for res_atom in res.atoms():
         topology_atom = topology.addAtom(
@@ -266,7 +266,7 @@ def _topology_from_residue(res):
 def _check_independent_residues(structure):
     """Check to see if residues will constitute independent graphs."""
     for res in structure.residues:
-        atoms_in_residue = set([*res.atoms])
+        atoms_in_residue = {*res.atoms}
         bond_partners_in_residue = [
             item
             for sublist in [atom.bond_partners for atom in res.atoms]
@@ -477,14 +477,14 @@ class Forcefield(app.ForceField):
     """
 
     def __init__(self, forcefield_files=None, name=None, validation=True, debug=False):
-        self.atomTypeDefinitions = dict()
-        self.atomTypeOverrides = dict()
-        self.atomTypeDesc = dict()
-        self.atomTypeRefs = dict()
-        self.atomTypeClasses = dict()
-        self.atomTypeElements = dict()
-        self._included_forcefields = dict()
-        self.non_element_types = dict()
+        self.atomTypeDefinitions = {}
+        self.atomTypeOverrides = {}
+        self.atomTypeDesc = {}
+        self.atomTypeRefs = {}
+        self.atomTypeClasses = {}
+        self.atomTypeElements = {}
+        self._included_forcefields = {}
+        self.non_element_types = {}
         self._version = None
         self._name = None
         self._combining_rule = None
@@ -670,15 +670,13 @@ class Forcefield(app.ForceField):
         if "def" in parameters:
             self.atomTypeDefinitions[name] = parameters["def"]
         if "overrides" in parameters:
-            overrides = set(
-                atype.strip() for atype in parameters["overrides"].split(",")
-            )
+            overrides = {atype.strip() for atype in parameters["overrides"].split(",")}
             if overrides:
                 self.atomTypeOverrides[name] = overrides
         if "desc" in parameters:
             self.atomTypeDesc[name] = parameters["desc"]
         if "doi" in parameters:
-            dois = set(doi.strip() for doi in parameters["doi"].split(","))
+            dois = {doi.strip() for doi in parameters["doi"].split(",")}
             self.atomTypeRefs[name] = dois
         if "element" in parameters:
             self.atomTypeElements[name] = parameters["element"]
@@ -807,7 +805,7 @@ class Forcefield(app.ForceField):
             independent_residues = _check_independent_residues(structure)
 
             if independent_residues:
-                residue_map = dict()
+                residue_map = {}
 
                 # Need to call this only once and store results for later id() comparisons
                 for res_id, res in enumerate(structure.residues):
@@ -865,7 +863,7 @@ class Forcefield(app.ForceField):
         )
 
         if references_file:
-            atom_types = set(atom.type for atom in structure.atoms)
+            atom_types = {atom.type for atom in structure.atoms}
             self._write_references_to_file(atom_types, references_file)
 
         try:
@@ -961,18 +959,13 @@ class Forcefield(app.ForceField):
         for atom in topology.atoms():
             # Look up the atom type name, returning a helpful error message if it cannot be found.
             if atom not in data.atomType:
-                raise Exception(
-                    "Could not identify atom type for atom '%s'." % str(atom)
-                )
+                raise Exception(f"Could not identify atom type for atom '{atom!s}'.")
             typename = data.atomType[atom]
 
             # Look up the type name in the list of registered atom types, returning a helpful error message if it cannot be found.
             if typename not in self._atomTypes:
-                msg = (
-                    "Could not find typename '%s' for atom '%s' in list of known atom types.\n"
-                    % (typename, str(atom))
-                )
-                msg += "Known atom types are: %s" % str(self._atomTypes.keys())
+                msg = f"Could not find typename '{typename}' for atom '{atom!s}' in list of known atom types.\n"
+                msg += f"Known atom types are: {self._atomTypes.keys()!s}"
                 raise Exception(msg)
 
             # Add the particle to the OpenMM system.
@@ -1023,7 +1016,7 @@ class Forcefield(app.ForceField):
                         unique_angles.add((bond.atom1, bond.atom2, atom))
                     else:
                         unique_angles.add((atom, bond.atom2, bond.atom1))
-        data.angles = sorted(list(unique_angles))
+        data.angles = sorted(unique_angles)
 
         # Make a list of all unique proper torsions
         unique_propers = set()
@@ -1040,7 +1033,7 @@ class Forcefield(app.ForceField):
                         unique_propers.add((angle[0], angle[1], angle[2], atom))
                     else:
                         unique_propers.add((atom, angle[2], angle[1], angle[0]))
-        data.propers = sorted(list(unique_propers))
+        data.propers = sorted(unique_propers)
 
         # Make a list of all unique improper torsions
         for atom in range(len(data.bondedToAtom)):
@@ -1176,7 +1169,7 @@ class Forcefield(app.ForceField):
         for atom in structure.atoms:
             atom.id = typemap[atom.idx]["atomtype"]
 
-        if not all([a.id for a in structure.atoms]):
+        if not all(a.id for a in structure.atoms):
             raise ValueError("Not all atoms in topology have atom types")
 
     def _prepare_structure(self, topology, **kwargs):

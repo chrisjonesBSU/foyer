@@ -114,7 +114,7 @@ def _write_atoms(self, root, atoms, forcefield, unique):
             ("overrides", "forcefield.atomTypeOverrides[name]"),
         ]
     )
-    atom_type_set = set([atom.atom_type.name for atom in atoms])
+    atom_type_set = {atom.atom_type.name for atom in atoms}
     for atom in atoms:
         atomtype = ET.SubElement(atomtypes, "Type")
         nb_force = ET.SubElement(nonbonded, "Atom")
@@ -169,7 +169,7 @@ def _write_atoms(self, root, atoms, forcefield, unique):
 def _update_defs(atomtypes, nonbonded, forcefield):
     def_list = [i.get("def") for i in atomtypes.iterchildren()]
     name_list = [i.get("name") for i in atomtypes.iterchildren()]
-    smarts_list = list()
+    smarts_list = []
     smarts_parser = forcefield.parser
     for smarts_string, name in zip(def_list, name_list):
         smarts_graph = SMARTSGraph(smarts_string, parser=smarts_parser, name=name)
@@ -338,14 +338,11 @@ def _unique_periodictorsion_parameters(dihedral1, dihedral2):
             )
         )
         n += 1
-    if (
+    return (
         dihedral2.attrib["periodicity1"],
         dihedral2.attrib["phase1"],
         dihedral2.attrib["k1"],
-    ) in param_tuples:
-        return False
-    else:
-        return True
+    ) not in param_tuples
 
 
 def _write_rb_torsions(root, rb_torsions, unique):
@@ -423,7 +420,7 @@ def _elements_equal(e1, e2):
         return False
     if len(e1) != len(e2):
         return False
-    return all([_elements_equal(c1, c2) for c1, c2 in zip(e1, e2)])
+    return all(_elements_equal(c1, c2) for c1, c2 in zip(e1, e2))
 
 
 def _infer_coulomb14scale(struct):
@@ -444,7 +441,7 @@ def _infer_coulomb14scale(struct):
 
 def _infer_lj14scale(struct, combining_rule: str):
     """Infer the Lennard-Jones 1-4 scaling factor in the structure."""
-    lj14scale = list()
+    lj14scale = []
 
     if struct.defaults:
         return struct.defaults.fudgeLJ

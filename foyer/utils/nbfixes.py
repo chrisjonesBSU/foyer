@@ -26,7 +26,7 @@ def apply_nbfix(struct, atom_type1, atom_type2, sigma, epsilon):
     """
     struct_copy = struct.copy(cls=Structure, split_dihedrals=True)
 
-    atypes_name = set(a.atom_type.name for a in struct_copy.atoms)
+    atypes_name = {a.atom_type.name for a in struct_copy.atoms}
     if atom_type1 not in atypes_name or atom_type2 not in atypes_name:
         raise ValueError(
             f"Atom types {atom_type1} and {atom_type2} not found in structure."
@@ -35,7 +35,7 @@ def apply_nbfix(struct, atom_type1, atom_type2, sigma, epsilon):
     # Calculate rmin from sigma because parmed uses it internally
     rmin = sigma * 2 ** (1.0 / 6.0)
 
-    atom_types = list(a.atom_type for a in struct_copy.atoms)
+    atom_types = [a.atom_type for a in struct_copy.atoms]
     for atom_type in sorted(atom_types, key=lambda a: a.name):
         if atom_type.name == atom_type1:
             atom_type.add_nbfix(atom_type2, rmin, epsilon)

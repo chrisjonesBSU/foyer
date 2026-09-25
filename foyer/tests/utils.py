@@ -26,7 +26,7 @@ def atomtype(structure, forcefield, **kwargs):
 
     typed_structure = forcefield.apply(structure, **kwargs)
 
-    generated_atom_types = list()
+    generated_atom_types = []
     for i, atom in enumerate(typed_structure.atoms):
         message = (
             f"Found multiple or no atom types for atom {i} in {structure.title}: {atom.type}\n"

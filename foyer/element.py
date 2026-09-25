@@ -44,4 +44,4 @@ class Element(elem.Element):
         Element._elements_by_mass = None
 
         if s in Element._elements_by_symbol:
-            raise ValueError("Duplicate element symbol %s" % s)
+            raise ValueError(f"Duplicate element symbol {s}")

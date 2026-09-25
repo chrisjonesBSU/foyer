@@ -12,7 +12,7 @@ class DelayImportError(ImportError, SkipTest):
     """Raise an appropriate error after first catching it."""
 
 
-MESSAGES = dict()
+MESSAGES = {}
 MESSAGES["mbuild"] = """
 
 The code at {filename}:{line_number} requires the "mbuild" package
@@ -75,15 +75,15 @@ def import_(module):
                 + module
                 + " package"
             )
-            raise ImportError("No module named %s" % module)
+            raise ImportError(f"No module named {module}")
 
         (
-            frame,
+            _frame,
             filename,
             line_number,
-            function_name,
-            lines,
-            index,
+            _function_name,
+            _lines,
+            _index,
         ) = inspect.getouterframes(inspect.currentframe())[1]
 
         m = message.format(filename=os.path.basename(filename), line_number=line_number)

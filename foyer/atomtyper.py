@@ -97,7 +97,7 @@ def find_atomtypes(structure, forcefield, max_iter=10):
     rules = _load_rules(atomtype_rules, typemap)
 
     # Only consider rules for elements found in topology
-    subrules = dict()
+    subrules = {}
 
     system_elements = set()
     for _, atom_data in topology_graph.atoms(data=True):
@@ -152,7 +152,7 @@ def find_atomtypes(structure, forcefield, max_iter=10):
 
 def _load_rules(rules_provider, typemap):
     """Load atomtyping rules from a AtomTypingRulesProvider into SMARTSGraphs."""
-    rules = dict()
+    rules = {}
     # For every SMARTS string in the force field,
     # create a SMARTSGraph object
     for rule_name, smarts in rules_provider.atomtype_definitions.items():

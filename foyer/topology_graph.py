@@ -112,8 +112,8 @@ class TopologyGraph(nx.Graph):
     def atoms(self, data=False):
         """Iterate through atoms in the TopologyGraph."""
         if data:
-            for idx, data in self.nodes(data=data):
-                yield idx, data["atom_data"]
+            for idx, _data in self.nodes(data=data):
+                yield idx, _data["atom_data"]
         else:
             for idx in self.nodes(data=data):
                 yield idx

@@ -33,7 +33,7 @@ class TestOPLS(BaseTest):
         with open(self.implemented_tests_path, "a") as fh:
             for mol_path in it.chain(self.top_files, self.mol2_files):
                 _, mol_file = os.path.split(mol_path)
-                mol_name, ext = os.path.splitext(mol_file)
+                mol_name, _ext = os.path.splitext(mol_file)
                 try:
                     self.test_atomtyping(mol_name)
                 except Exception as e:

@@ -159,11 +159,11 @@ class TestForcefield(BaseTest):
         oplsaa = Forcefield(forcefield_files=get_fn("refs-multi.xml"))
         oplsaa.apply(mol2, references_file="ethane-multi.bib")
         assert os.path.isfile("ethane-multi.bib")
-        with open(get_fn("ethane-multi.bib")) as file1:
-            with open("ethane-multi.bib") as file2:
-                diff = list(
-                    difflib.unified_diff(file1.readlines(), file2.readlines(), n=0)
-                )
+        with (
+            open(get_fn("ethane-multi.bib")) as file1,
+            open("ethane-multi.bib") as file2,
+        ):
+            diff = list(difflib.unified_diff(file1.readlines(), file2.readlines(), n=0))
         assert not diff
 
     @pytest.mark.skipif(not has_mbuild, reason="mbuild is not installed")

@@ -754,7 +754,7 @@ class Forcefield(app.ForceField):
             assert_dihedral_params=assert_dihedral_params,
             assert_improper_params=assert_improper_params,
             verbose=verbose,
-            *args,
+            *args,  # noqa: B026
             **kwargs,
         )
 

@@ -70,8 +70,8 @@ def preprocess_forcefield_files(forcefield_files=None):
     for xml_file in forcefield_files:
         if not hasattr(xml_file, "read"):
             try:
-                f = open(xml_file, encoding="utf-8")
-                xml_contents = f.read()
+                with open(xml_file, encoding="utf-8") as f:
+                    xml_contents = f.read()
             finally:
                 f.close()
 
@@ -123,12 +123,11 @@ def preprocess_forcefield_files(forcefield_files=None):
             )
 
         # write to temp file
-        temp_file = NamedTemporaryFile(suffix=suffix, delete=False)
-        with open(temp_file.name, "w") as temp_f:
-            temp_f.write(xml_contents)
+        with NamedTemporaryFile(suffix=suffix, delete=False, mode="w") as temp_file:
+            temp_file.write(xml_contents)
 
-        # append temp file name to list
-        preprocessed_files.append(temp_file.name)
+            # append temp file name to list
+            preprocessed_files.append(temp_file.name)
 
     return preprocessed_files
 

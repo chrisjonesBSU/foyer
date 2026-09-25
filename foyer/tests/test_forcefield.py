@@ -12,6 +12,7 @@ from parmed.gromacs.gromacstop import _Defaults
 from foyer import Forcefield, forcefields
 from foyer.exceptions import (
     FoyerError,
+    MissingParametersError,
     UnimplementedCombinationRuleError,
 )
 from foyer.forcefield import (
@@ -388,7 +389,7 @@ class TestForcefield(BaseTest):
 
         ethane = mb.load(get_fn("ethane.mol2"))
         oplsaa_with_typo = Forcefield(forcefield_files=get_fn(ff_filename))
-        with pytest.raises(Exception):
+        with pytest.raises(MissingParametersError):
             ethane = oplsaa_with_typo.apply(ethane)
         with caplog.at_level(logging.INFO, logger="foyer"):
             ethane = oplsaa_with_typo.apply(ethane, **kwargs)
@@ -440,7 +441,7 @@ class TestForcefield(BaseTest):
         derponium.add_bond((at1, at2))
         derponium.add_bond((at2, at3))
 
-        with pytest.raises(Exception):
+        with pytest.raises(MissingParametersError):
             ff.apply(derponium)
         thing = ff.apply(derponium, assert_bond_params=False, assert_angle_params=False)
         assert any(b.type is None for b in thing.bonds)

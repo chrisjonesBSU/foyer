@@ -40,6 +40,10 @@ class MissingParametersError(FoyerError):
     """Error to be raised when parameters are missing from the forcefield."""
 
 
+class UnknownAtomTypeError(FoyerError):
+    """Error to be raised when an atom's type cannot be determined or is unregistered."""
+
+
 class MissingForceError(FoyerError):
     """Error to be raised when a particular force doesn't exist in the forcefield."""
 

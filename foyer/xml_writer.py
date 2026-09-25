@@ -8,6 +8,7 @@ import numpy as np
 import parmed as pmd
 from lxml import etree as ET
 
+from foyer.exceptions import MissingParametersError
 from foyer.smarts_graph import SMARTSGraph
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,9 @@ def write_foyer(
     # Assume if a Structure has a bond and bond type that the Structure is
     # parameterized. ParmEd uses the same logic to denote parameterization.
     if not (len(self.bonds) > 0 and self.bonds[0].type is not None):
-        raise Exception("Cannot write Foyer XML from an unparametrized Structure.")
+        raise MissingParametersError(
+            "Cannot write Foyer XML from an unparametrized Structure."
+        )
 
     root = ET.Element("ForceField")
     # Write Forcefield information

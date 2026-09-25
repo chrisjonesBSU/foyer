@@ -42,6 +42,7 @@ from foyer.exceptions import (
     MissingForceError,
     MissingParametersError,
     UnimplementedCombinationRuleError,
+    UnknownAtomTypeError,
 )
 from foyer.utils.external import get_ref
 from foyer.utils.io import has_mbuild, import_
@@ -336,7 +337,7 @@ def _error_or_warn(error, msg):
         The message to be provided with the error or warning
     """
     if error:
-        raise Exception(msg)
+        raise MissingParametersError(msg)
     else:
         logger.warning(msg)
 
@@ -491,8 +492,7 @@ class Forcefield(app.ForceField):
         all_files_to_load = []
         if forcefield_files is not None:
             if isinstance(forcefield_files, (list, tuple, set)):
-                for file in forcefield_files:
-                    all_files_to_load.append(file)
+                all_files_to_load.extend(forcefield_files)
             else:
                 all_files_to_load.append(forcefield_files)
 
@@ -958,14 +958,16 @@ class Forcefield(app.ForceField):
         for atom in topology.atoms():
             # Look up the atom type name, returning a helpful error message if it cannot be found.
             if atom not in data.atomType:
-                raise Exception(f"Could not identify atom type for atom '{atom!s}'.")
+                raise UnknownAtomTypeError(
+                    f"Could not identify atom type for atom '{atom!s}'."
+                )
             typename = data.atomType[atom]
 
             # Look up the type name in the list of registered atom types, returning a helpful error message if it cannot be found.
             if typename not in self._atomTypes:
                 msg = f"Could not find typename '{typename}' for atom '{atom!s}' in list of known atom types.\n"
                 msg += f"Known atom types are: {self._atomTypes.keys()!s}"
-                raise Exception(msg)
+                raise UnknownAtomTypeError(msg)
 
             # Add the particle to the OpenMM system.
             mass = self._atomTypes[typename].mass

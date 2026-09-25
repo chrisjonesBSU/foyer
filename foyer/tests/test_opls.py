@@ -36,7 +36,7 @@ class TestOPLS(BaseTest):
                 mol_name, _ext = os.path.splitext(mol_file)
                 try:
                     self.test_atomtyping(mol_name)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     print(e)
                     continue
                 else:

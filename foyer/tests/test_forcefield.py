@@ -1,9 +1,8 @@
 import difflib
 import glob
-import importlib.resources as resources
 import logging
 import os
-from typing import List
+from importlib import resources
 
 import parmed as pmd
 import pytest
@@ -13,6 +12,7 @@ from parmed.gromacs.gromacstop import _Defaults
 from foyer import Forcefield, forcefields
 from foyer.exceptions import (
     FoyerError,
+    MissingParametersError,
     UnimplementedCombinationRuleError,
 )
 from foyer.forcefield import (
@@ -78,8 +78,8 @@ class TestForcefield(BaseTest):
         mol2 = pmd.load_file(get_fn("ethane.mol2"), structure=True)
         ethane = oplsaa.apply(mol2)
 
-        assert sum((1 for at in ethane.atoms if at.type == "opls_135")) == 2
-        assert sum((1 for at in ethane.atoms if at.type == "opls_140")) == 6
+        assert sum(1 for at in ethane.atoms if at.type == "opls_135") == 2
+        assert sum(1 for at in ethane.atoms if at.type == "opls_140") == 6
         assert len(ethane.bonds) == 7
         assert all(x.type for x in ethane.bonds)
         assert len(ethane.angles) == 12
@@ -111,8 +111,8 @@ class TestForcefield(BaseTest):
         mol2 = mb.load(get_fn("ethane.mol2"))
         ethane = oplsaa.apply(mol2)
 
-        assert sum((1 for at in ethane.atoms if at.type == "opls_135")) == 2
-        assert sum((1 for at in ethane.atoms if at.type == "opls_140")) == 6
+        assert sum(1 for at in ethane.atoms if at.type == "opls_135") == 2
+        assert sum(1 for at in ethane.atoms if at.type == "opls_140") == 6
         assert len(ethane.bonds) == 7
         assert all(x.type for x in ethane.bonds)
         assert len(ethane.angles) == 12
@@ -134,11 +134,8 @@ class TestForcefield(BaseTest):
         mol2 = mb.load(get_fn("ethane.mol2"))
         oplsaa.apply(mol2, references_file="ethane.bib")
         assert os.path.isfile("ethane.bib")
-        with open(get_fn("ethane.bib")) as file1:
-            with open("ethane.bib") as file2:
-                diff = list(
-                    difflib.unified_diff(file1.readlines(), file2.readlines(), n=0)
-                )
+        with open(get_fn("ethane.bib")) as file1, open("ethane.bib") as file2:
+            diff = list(difflib.unified_diff(file1.readlines(), file2.readlines(), n=0))
         assert not diff
 
     @pytest.mark.skipif(not has_mbuild, reason="mbuild is not installed")
@@ -163,11 +160,11 @@ class TestForcefield(BaseTest):
         oplsaa = Forcefield(forcefield_files=get_fn("refs-multi.xml"))
         oplsaa.apply(mol2, references_file="ethane-multi.bib")
         assert os.path.isfile("ethane-multi.bib")
-        with open(get_fn("ethane-multi.bib")) as file1:
-            with open("ethane-multi.bib") as file2:
-                diff = list(
-                    difflib.unified_diff(file1.readlines(), file2.readlines(), n=0)
-                )
+        with (
+            open(get_fn("ethane-multi.bib")) as file1,
+            open("ethane-multi.bib") as file2,
+        ):
+            diff = list(difflib.unified_diff(file1.readlines(), file2.readlines(), n=0))
         assert not diff
 
     @pytest.mark.skipif(not has_mbuild, reason="mbuild is not installed")
@@ -213,8 +210,8 @@ class TestForcefield(BaseTest):
         customtype_ff = Forcefield(forcefield_files=get_fn("validate_customtypes.xml"))
         ethane = customtype_ff.apply(mol2)
 
-        assert sum((1 for at in ethane.atoms if at.type == "C3")) == 2
-        assert sum((1 for at in ethane.atoms if at.type == "Hb")) == 6
+        assert sum(1 for at in ethane.atoms if at.type == "C3") == 2
+        assert sum(1 for at in ethane.atoms if at.type == "Hb") == 6
         assert len(ethane.bonds) == 7
         assert all(x.type for x in ethane.bonds)
         assert len(ethane.angles) == 12
@@ -287,8 +284,8 @@ class TestForcefield(BaseTest):
         ethane *= 2
         map_with = oplsaa.run_atomtyping(ethane, use_residue_map=True)
         map_without = oplsaa.run_atomtyping(ethane, use_residue_map=False)
-        assert all([a["atomtype"] for a in map_with.values()])
-        assert all([a["atomtype"] for a in map_without.values()])
+        assert all(a["atomtype"] for a in map_with.values())
+        assert all(a["atomtype"] for a in map_without.values())
         struct_with = ethane
         struct_without = ethane
         oplsaa._apply_typemap(struct_with, map_with)
@@ -392,11 +389,11 @@ class TestForcefield(BaseTest):
 
         ethane = mb.load(get_fn("ethane.mol2"))
         oplsaa_with_typo = Forcefield(forcefield_files=get_fn(ff_filename))
-        with pytest.raises(Exception):
+        with pytest.raises(MissingParametersError):
             ethane = oplsaa_with_typo.apply(ethane)
         with caplog.at_level(logging.INFO, logger="foyer"):
             ethane = oplsaa_with_typo.apply(ethane, **kwargs)
-        if "angle" in list(kwargs.keys())[0]:
+        if "angle" in next(iter(kwargs.keys())):
             assert "Parameters have not been assigned to all angles" in caplog.text
         else:  # dihedrals missing
             assert (
@@ -444,7 +441,7 @@ class TestForcefield(BaseTest):
         derponium.add_bond((at1, at2))
         derponium.add_bond((at2, at3))
 
-        with pytest.raises(Exception):
+        with pytest.raises(MissingParametersError):
             ff.apply(derponium)
         thing = ff.apply(derponium, assert_bond_params=False, assert_angle_params=False)
         assert any(b.type is None for b in thing.bonds)
@@ -624,10 +621,10 @@ class TestForcefield(BaseTest):
 
     def test_load_metadata_list_xml(self):
         from_xml_ff = Forcefield(forcefield_files=[get_fn("lj.xml"), get_fn("lj2.xml")])
-        assert isinstance(from_xml_ff.version, List)
-        assert isinstance(from_xml_ff.name, List)
-        assert all([x in from_xml_ff.version for x in ["0.4.1", "4.8.2"]])
-        assert all([x in from_xml_ff.name for x in ["JL", "LJ"]])
+        assert isinstance(from_xml_ff.version, list)
+        assert isinstance(from_xml_ff.name, list)
+        assert all(x in from_xml_ff.version for x in ["0.4.1", "4.8.2"])
+        assert all(x in from_xml_ff.name for x in ["JL", "LJ"])
 
         with pytest.raises(FoyerError):
             Forcefield(forcefield_files=[get_fn("lj.xml"), get_fn("lj3.xml")])
@@ -661,8 +658,8 @@ class TestForcefield(BaseTest):
         for res_id, res in enumerate(structure.residues):
             all_substructures.append(_structure_from_residue(res, structure))
 
-        residue_idx_per_atom = map(lambda x: x.residue.idx, structure.atoms)
-        num_unique_residue_indices = len(set([*residue_idx_per_atom]))
+        residue_idx_per_atom = (x.residue.idx for x in structure.atoms)
+        num_unique_residue_indices = len({*residue_idx_per_atom})
         num_residues = len(structure.residues)
 
         assert num_residues == num_unique_residue_indices

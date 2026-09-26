@@ -1,7 +1,5 @@
 """File I/O support module."""
 
-from __future__ import division, print_function
-
 import importlib
 import inspect
 import os
@@ -13,10 +11,8 @@ from unittest import SkipTest
 class DelayImportError(ImportError, SkipTest):
     """Raise an appropriate error after first catching it."""
 
-    pass
 
-
-MESSAGES = dict()
+MESSAGES = {}
 MESSAGES["mbuild"] = """
 
 The code at {filename}:{line_number} requires the "mbuild" package
@@ -79,15 +75,15 @@ def import_(module):
                 + module
                 + " package"
             )
-            raise ImportError("No module named %s" % module)
+            raise ImportError(f"No module named {module}")
 
         (
-            frame,
+            _frame,
             filename,
             line_number,
-            function_name,
-            lines,
-            index,
+            _function_name,
+            _lines,
+            _index,
         ) = inspect.getouterframes(inspect.currentframe())[1]
 
         m = message.format(filename=os.path.basename(filename), line_number=line_number)
@@ -99,7 +95,7 @@ def import_(module):
             + "\033[0m"
         )
 
-        print("", file=sys.stderr)
+        print(file=sys.stderr)
         print(bar, file=sys.stderr)
         print(m, file=sys.stderr)
         print(bar, file=sys.stderr)

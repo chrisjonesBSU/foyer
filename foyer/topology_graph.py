@@ -1,6 +1,6 @@
 """Module to represent chemical systems as graph structures."""
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import networkx as nx
 from parmed import Structure
@@ -54,14 +54,14 @@ class TopologyGraph(nx.Graph):
     """
 
     def __init__(self, *args, **kwargs):
-        super(TopologyGraph, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def add_atom(
         self,
         index: int,
         name: str,
-        atomic_number: Optional[int] = None,
-        symbol: Optional[str] = None,
+        atomic_number: int | None = None,
+        symbol: str | None = None,
         **kwargs,
     ):
         """Add an atom to the topology graph.
@@ -112,8 +112,8 @@ class TopologyGraph(nx.Graph):
     def atoms(self, data=False):
         """Iterate through atoms in the TopologyGraph."""
         if data:
-            for idx, data in self.nodes(data=data):
-                yield idx, data["atom_data"]
+            for idx, _data in self.nodes(data=data):
+                yield idx, _data["atom_data"]
         else:
             for idx in self.nodes(data=data):
                 yield idx

@@ -10,7 +10,7 @@ from foyer.tests.utils import get_fn
 
 @pytest.mark.skipif(
     condition="load_GAFF"
-    not in map(lambda func: func.__name__, get_available_forcefield_loaders()),
+    not in (func.__name__ for func in get_available_forcefield_loaders()),
     reason="GAFF Plugin is not installed",
 )
 class TestForcefieldParameters(BaseTest):

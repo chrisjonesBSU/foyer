@@ -34,13 +34,13 @@ class TestGraph(BaseTest):
 
         rule = SMARTSGraph(smarts_string="[C]", typemap=typemap)
         list(rule.find_matches(TopologyGraph.from_parmed(mol2), typemap))
-        assert not any(["cycles" in typemap[a.idx] for a in mol2.atoms])
+        assert not any("cycles" in typemap[a.idx] for a in mol2.atoms)
 
         ring_tokens = ["R1", "r6"]
         for token in ring_tokens:
-            rule = SMARTSGraph(smarts_string="[C;{}]".format(token), typemap=typemap)
+            rule = SMARTSGraph(smarts_string=f"[C;{token}]", typemap=typemap)
             list(rule.find_matches(TopologyGraph.from_parmed(mol2), typemap))
-            assert all(["cycles" in typemap[a.idx] for a in mol2.atoms])
+            assert all("cycles" in typemap[a.idx] for a in mol2.atoms)
 
     def test_cycle_finding_multiple(self):
         mol2 = pmd.load_file(get_fn("fullerene.pdb"), structure=True)

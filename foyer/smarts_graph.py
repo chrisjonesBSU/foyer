@@ -48,7 +48,7 @@ class SMARTSGraph(nx.Graph):
         *args,
         **kwargs,
     ):
-        super(SMARTSGraph, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.smarts_string = smarts_string
         self.name = name
@@ -167,7 +167,7 @@ class SMARTSGraph(nx.Graph):
             raise TypeError(
                 "Expected atom_id, atom_symbol, and_expression, "
                 "or_expression, or not_expression. "
-                "Got {}".format(atom_expr.data)
+                f"Got {atom_expr.data}"
             )
 
     @staticmethod
@@ -200,9 +200,7 @@ class SMARTSGraph(nx.Graph):
             return False
         elif atom_id.data == "ring_count":
             n_cycles = len(typemap[atom_idx]["cycles"])
-            if n_cycles == int(atom_id.children[0]):
-                return True
-            return False
+            return n_cycles == int(atom_id.children[0])
         elif atom_id.data == "matches_string":
             raise NotImplementedError("matches_string is not yet implemented")
 
@@ -274,7 +272,7 @@ class SMARTSMatcher(isomorphism.vf2userfunc.GraphMatcher):
     """Inherits and implements VF2 for a SMARTSGraph."""
 
     def __init__(self, G1, G2, node_match, edge_match, element, typemap):
-        super(SMARTSMatcher, self).__init__(G1, G2, node_match, edge_match)
+        super().__init__(G1, G2, node_match, edge_match)
         self.element = element
         self.typemap = typemap
         # TODO: Parse out nodes containing other elements (see git history)
@@ -355,10 +353,8 @@ def _find_chordless_cycles(bond_graph, max_cycle_size):
                 for possible_ring in possible_rings:
                     if bond_graph.has_edge(possible_ring[-1], last_node):
                         if any(
-                            [
-                                bond_graph.has_edge(possible_ring[-1], internal_node)
-                                for internal_node in possible_ring[1:-2]
-                            ]
+                            bond_graph.has_edge(possible_ring[-1], internal_node)
+                            for internal_node in possible_ring[1:-2]
                         ):
                             pass
                         else:

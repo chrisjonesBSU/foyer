@@ -2,16 +2,16 @@
 
 import collections
 import glob
-import importlib.resources as resources
 import itertools
 import logging
 import os
 import re
 import xml.etree.ElementTree as ET
+from collections.abc import Callable, Iterable
 from copy import copy
+from importlib import resources
 from importlib.metadata import entry_points
 from tempfile import NamedTemporaryFile
-from typing import Callable, Iterable, List
 
 import numpy as np
 import openmm as mm
@@ -42,6 +42,7 @@ from foyer.exceptions import (
     MissingForceError,
     MissingParametersError,
     UnimplementedCombinationRuleError,
+    UnknownAtomTypeError,
 )
 from foyer.utils.external import get_ref
 from foyer.utils.io import has_mbuild, import_
@@ -70,8 +71,8 @@ def preprocess_forcefield_files(forcefield_files=None):
     for xml_file in forcefield_files:
         if not hasattr(xml_file, "read"):
             try:
-                f = open(xml_file, encoding="utf-8")
-                xml_contents = f.read()
+                with open(xml_file, encoding="utf-8") as f:
+                    xml_contents = f.read()
             finally:
                 f.close()
 
@@ -104,7 +105,7 @@ def preprocess_forcefield_files(forcefield_files=None):
                             * len(
                                 [
                                     attr_name
-                                    for attr_name in child.keys()
+                                    for attr_name in child.keys()  # noqa: SIM118
                                     if "type" in attr_name
                                 ]
                             )
@@ -123,17 +124,16 @@ def preprocess_forcefield_files(forcefield_files=None):
             )
 
         # write to temp file
-        temp_file = NamedTemporaryFile(suffix=suffix, delete=False)
-        with open(temp_file.name, "w") as temp_f:
-            temp_f.write(xml_contents)
+        with NamedTemporaryFile(suffix=suffix, delete=False, mode="w") as temp_file:
+            temp_file.write(xml_contents)
 
-        # append temp file name to list
-        preprocessed_files.append(temp_file.name)
+            # append temp file name to list
+            preprocessed_files.append(temp_file.name)
 
     return preprocessed_files
 
 
-def get_available_forcefield_loaders() -> List[Callable]:
+def get_available_forcefield_loaders() -> list[Callable]:
     """Get a list of available force field loader functions."""
     available_ff_paths = []
     for entry_point in entry_points(group="foyer.forcefields"):
@@ -156,18 +156,18 @@ def generate_topology(non_omm_topology, non_element_types=None, residues=None):
             return _topology_from_parmed(pmd_comp_struct, non_element_types)
     else:
         raise FoyerError(
-            "Unknown topology format: {}\n"
+            f"Unknown topology format: {non_omm_topology}\n"
             "Supported formats are: "
             '"parmed.Structure", '
             '"mbuild.Compound", '
-            '"openmm.app.Topology"'.format(non_omm_topology)
+            '"openmm.app.Topology"'
         )
 
 
 def _structure_from_residue(residue, parent_structure):
     """Convert a ParmEd Residue to an equivalent Structure."""
     structure = pmd.Structure()
-    orig_to_copy = dict()  # Clone a lot of atoms to avoid any of parmed's tracking
+    orig_to_copy = {}  # Clone a lot of atoms to avoid any of parmed's tracking
     for atom in residue.atoms:
         new_atom = copy(atom)
         new_atom._idx = atom.idx
@@ -186,13 +186,13 @@ def _structure_from_residue(residue, parent_structure):
 def _topology_from_parmed(structure, non_element_types):
     """Convert a ParmEd Structure to an OpenMM Topology."""
     topology = app.Topology()
-    residues = dict()
+    residues = {}
     for pmd_residue in structure.residues:
         chain = topology.addChain()
         omm_residue = topology.addResidue(pmd_residue.name, chain)
         # Index ParmEd residues on name & number, no other info i.e. chain
         residues[(pmd_residue.name, pmd_residue.idx)] = omm_residue
-    atoms = dict()  # pmd.Atom: omm.Atom
+    atoms = {}  # pmd.Atom: omm.Atom
 
     for pmd_atom in structure.atoms:
         name = pmd_atom.name
@@ -244,7 +244,7 @@ def _topology_from_residue(res):
     chain = topology.addChain()
     new_res = topology.addResidue(res.name, chain)
 
-    atoms = dict()  # { omm.Atom in res : omm.Atom in *new* topology }
+    atoms = {}  # { omm.Atom in res : omm.Atom in *new* topology }
 
     for res_atom in res.atoms():
         topology_atom = topology.addAtom(
@@ -266,7 +266,7 @@ def _topology_from_residue(res):
 def _check_independent_residues(structure):
     """Check to see if residues will constitute independent graphs."""
     for res in structure.residues:
-        atoms_in_residue = set([*res.atoms])
+        atoms_in_residue = {*res.atoms}
         bond_partners_in_residue = [
             item
             for sublist in [atom.bond_partners for atom in res.atoms]
@@ -337,9 +337,9 @@ def _error_or_warn(error, msg):
         The message to be provided with the error or warning
     """
     if error:
-        raise Exception(msg)
+        raise MissingParametersError(msg)
     else:
-        logger.warn(msg)
+        logger.warning(msg)
 
 
 def _check_bonds(data, structure, verbose, assert_bond_params):
@@ -358,8 +358,7 @@ def _check_bonds(data, structure, verbose, assert_bond_params):
             nmissing = len(structure.bonds) - len(missing)
             msg = (
                 "Parameters have not been assigned to all bonds. "
-                "Total system bonds: {}, Parametrized bonds: {}"
-                "".format(len(structure.bonds), nmissing)
+                f"Total system bonds: {len(structure.bonds)}, Parametrized bonds: {nmissing}"
             )
             _error_or_warn(assert_bond_params, msg)
 
@@ -379,16 +378,13 @@ def _check_angles(data, structure, verbose, assert_angle_params):
                     missing_angle = False
             if missing_angle:
                 print(
-                    "Missing angle with ids {} and types {}.".format(
-                        omm_ids, [structure.atoms[idx].type for idx in omm_ids]
-                    )
+                    f"Missing angle with ids {omm_ids} and types {[structure.atoms[idx].type for idx in omm_ids]}."
                 )
 
     if data.angles and (len(data.angles) != len(structure.angles)):
         msg = (
             "Parameters have not been assigned to all angles. Total "
-            "system angles: {}, Parameterized angles: {}"
-            "".format(len(data.angles), len(structure.angles))
+            f"system angles: {len(data.angles)}, Parameterized angles: {len(structure.angles)}"
         )
         _error_or_warn(assert_angle_params, msg)
 
@@ -424,9 +420,7 @@ def _check_dihedrals(
                     missing_dihedral = False
             if missing_dihedral:
                 print(
-                    "Missing dihedral with ids {} and types {}.".format(
-                        omm_ids, [structure.atoms[idx].type for idx in omm_ids]
-                    )
+                    f"Missing dihedral with ids {omm_ids} and types {[structure.atoms[idx].type for idx in omm_ids]}."
                 )
 
     if data.propers and len(data.propers) != len(proper_dihedrals) + len(
@@ -437,25 +431,19 @@ def _check_dihedrals(
         ):
             msg = (
                 "Parameters have been assigned to all proper dihedrals.  "
-                "However, there are more parameterized dihedrals ({}) "
-                "than total system dihedrals ({}).  "
+                f"However, there are more parameterized dihedrals ({len(proper_dihedrals) + len(structure.rb_torsions)}) "
+                f"than total system dihedrals ({len(data.propers)}).  "
                 "This may be due to having multiple periodic dihedrals "
-                "for a single system dihedral.".format(
-                    len(proper_dihedrals) + len(structure.rb_torsions),
-                    len(data.propers),
-                )
+                "for a single system dihedral."
             )
             logger.info(msg)
         else:
             msg = (
                 "Parameters have not been assigned to all proper dihedrals. "
-                "Total system dihedrals: {}, Parameterized dihedrals: {}. "
+                f"Total system dihedrals: {len(data.propers)}, Parameterized dihedrals: {len(proper_dihedrals) + len(structure.rb_torsions)}. "
                 "Note that if your system contains torsions of Ryckaert-"
                 "Bellemans functional form, all of these torsions are "
-                "processed as propers.".format(
-                    len(data.propers),
-                    len(proper_dihedrals) + len(structure.rb_torsions),
-                )
+                "processed as propers."
             )
             _error_or_warn(assert_dihedral_params, msg)
 
@@ -467,13 +455,10 @@ def _check_dihedrals(
     ):
         msg = (
             "Parameters have not been assigned to all impropers. Total "
-            "system impropers: {}, Parameterized impropers: {}. "
+            f"system impropers: {len(data.impropers)}, Parameterized impropers: {len(improper_dihedrals) + len(structure.impropers)}. "
             "Note that if your system contains torsions of Ryckaert-"
             "Bellemans functional form, all of these torsions are "
-            "processed as propers".format(
-                len(data.impropers),
-                len(improper_dihedrals) + len(structure.impropers),
-            )
+            "processed as propers"
         )
         _error_or_warn(assert_improper_params, msg)
 
@@ -492,14 +477,14 @@ class Forcefield(app.ForceField):
     """
 
     def __init__(self, forcefield_files=None, name=None, validation=True, debug=False):
-        self.atomTypeDefinitions = dict()
-        self.atomTypeOverrides = dict()
-        self.atomTypeDesc = dict()
-        self.atomTypeRefs = dict()
-        self.atomTypeClasses = dict()
-        self.atomTypeElements = dict()
-        self._included_forcefields = dict()
-        self.non_element_types = dict()
+        self.atomTypeDefinitions = {}
+        self.atomTypeOverrides = {}
+        self.atomTypeDesc = {}
+        self.atomTypeRefs = {}
+        self.atomTypeClasses = {}
+        self.atomTypeElements = {}
+        self._included_forcefields = {}
+        self.non_element_types = {}
         self._version = None
         self._name = None
         self._combining_rule = None
@@ -507,8 +492,7 @@ class Forcefield(app.ForceField):
         all_files_to_load = []
         if forcefield_files is not None:
             if isinstance(forcefield_files, (list, tuple, set)):
-                for file in forcefield_files:
-                    all_files_to_load.append(file)
+                all_files_to_load.extend(forcefield_files)
             else:
                 all_files_to_load.append(forcefield_files)
 
@@ -516,7 +500,7 @@ class Forcefield(app.ForceField):
             try:
                 file = self.included_forcefields[name]
             except KeyError:
-                raise IOError("Forcefield {} cannot be found".format(name))
+                raise OSError(f"Forcefield {name} cannot be found")
             else:
                 all_files_to_load.append(file)
 
@@ -524,7 +508,7 @@ class Forcefield(app.ForceField):
         if validation:
             for ff_file_name in preprocessed_files:
                 Validator(ff_file_name, debug)
-        super(Forcefield, self).__init__(*preprocessed_files)
+        super().__init__(*preprocessed_files)
 
         if len(preprocessed_files) == 1:
             self._version = self._parse_version_number(preprocessed_files[0])
@@ -647,7 +631,7 @@ class Forcefield(app.ForceField):
                 if element not in self.non_element_types:
                     logger.info(
                         "Non-atomistic element type detected. "
-                        "Creating custom element for {}".format(element)
+                        f"Creating custom element for {element}"
                     )
                 element = custom_elem.Element(
                     number=0, mass=mass, name=element, symbol=element
@@ -685,15 +669,13 @@ class Forcefield(app.ForceField):
         if "def" in parameters:
             self.atomTypeDefinitions[name] = parameters["def"]
         if "overrides" in parameters:
-            overrides = set(
-                atype.strip() for atype in parameters["overrides"].split(",")
-            )
+            overrides = {atype.strip() for atype in parameters["overrides"].split(",")}
             if overrides:
                 self.atomTypeOverrides[name] = overrides
         if "desc" in parameters:
             self.atomTypeDesc[name] = parameters["desc"]
         if "doi" in parameters:
-            dois = set(doi.strip() for doi in parameters["doi"].split(","))
+            dois = {doi.strip() for doi in parameters["doi"].split(",")}
             self.atomTypeRefs[name] = dois
         if "element" in parameters:
             self.atomTypeElements[name] = parameters["element"]
@@ -772,7 +754,7 @@ class Forcefield(app.ForceField):
             assert_dihedral_params=assert_dihedral_params,
             assert_improper_params=assert_improper_params,
             verbose=verbose,
-            *args,
+            *args,  # noqa: B026
             **kwargs,
         )
 
@@ -822,11 +804,11 @@ class Forcefield(app.ForceField):
             independent_residues = _check_independent_residues(structure)
 
             if independent_residues:
-                residue_map = dict()
+                residue_map = {}
 
                 # Need to call this only once and store results for later id() comparisons
                 for res_id, res in enumerate(structure.residues):
-                    if structure.residues[res_id].name not in residue_map.keys():
+                    if structure.residues[res_id].name not in residue_map:
                         tmp_res = _structure_from_residue(res, structure)
                         typemap = find_atomtypes(tmp_res, forcefield=self)
                         residue_map[res.name] = typemap
@@ -880,7 +862,7 @@ class Forcefield(app.ForceField):
         )
 
         if references_file:
-            atom_types = set(atom.type for atom in structure.atoms)
+            atom_types = {atom.type for atom in structure.atoms}
             self._write_references_to_file(atom_types, references_file)
 
         try:
@@ -899,7 +881,7 @@ class Forcefield(app.ForceField):
         if not np.allclose(total_charge, 0):
             logger.info(
                 "Parametrized structure has non-zero charge."
-                "Structure's total charge: {}".format(total_charge)
+                f"Structure's total charge: {total_charge}"
             )
 
         return structure
@@ -976,19 +958,16 @@ class Forcefield(app.ForceField):
         for atom in topology.atoms():
             # Look up the atom type name, returning a helpful error message if it cannot be found.
             if atom not in data.atomType:
-                raise Exception(
-                    "Could not identify atom type for atom '%s'." % str(atom)
+                raise UnknownAtomTypeError(
+                    f"Could not identify atom type for atom '{atom!s}'."
                 )
             typename = data.atomType[atom]
 
             # Look up the type name in the list of registered atom types, returning a helpful error message if it cannot be found.
             if typename not in self._atomTypes:
-                msg = (
-                    "Could not find typename '%s' for atom '%s' in list of known atom types.\n"
-                    % (typename, str(atom))
-                )
-                msg += "Known atom types are: %s" % str(self._atomTypes.keys())
-                raise Exception(msg)
+                msg = f"Could not find typename '{typename}' for atom '{atom!s}' in list of known atom types.\n"
+                msg += f"Known atom types are: {self._atomTypes.keys()!s}"
+                raise UnknownAtomTypeError(msg)
 
             # Add the particle to the OpenMM system.
             mass = self._atomTypes[typename].mass
@@ -1038,7 +1017,7 @@ class Forcefield(app.ForceField):
                         unique_angles.add((bond.atom1, bond.atom2, atom))
                     else:
                         unique_angles.add((atom, bond.atom2, bond.atom1))
-        data.angles = sorted(list(unique_angles))
+        data.angles = sorted(unique_angles)
 
         # Make a list of all unique proper torsions
         unique_propers = set()
@@ -1055,7 +1034,7 @@ class Forcefield(app.ForceField):
                         unique_propers.add((angle[0], angle[1], angle[2], atom))
                     else:
                         unique_propers.add((atom, angle[2], angle[1], angle[0]))
-        data.propers = sorted(list(unique_propers))
+        data.propers = sorted(unique_propers)
 
         # Make a list of all unique improper torsions
         for atom in range(len(data.bondedToAtom)):
@@ -1182,7 +1161,7 @@ class Forcefield(app.ForceField):
 
         # Execute scripts found in the XML files.
         for script in self._scripts:
-            exec(script, locals())
+            exec(script, locals())  # noqa: S102
 
         return sys
 
@@ -1191,7 +1170,7 @@ class Forcefield(app.ForceField):
         for atom in structure.atoms:
             atom.id = typemap[atom.idx]["atomtype"]
 
-        if not all([a.id for a in structure.atoms]):
+        if not all(a.id for a in structure.atoms):
             raise ValueError("Not all atoms in topology have atom types")
 
     def _prepare_structure(self, topology, **kwargs):
@@ -1225,7 +1204,7 @@ class Forcefield(app.ForceField):
             try:
                 atomtype_references[atype] = self.atomTypeRefs[atype]
             except KeyError:
-                logger.warning("Reference not found for atom type '{}'.".format(atype))
+                logger.warning(f"Reference not found for atom type '{atype}'.")
         unique_references = collections.defaultdict(list)
         for atomtype, dois in atomtype_references.items():
             for doi in dois:
@@ -1233,13 +1212,11 @@ class Forcefield(app.ForceField):
         unique_references = collections.OrderedDict(sorted(unique_references.items()))
         with open(references_file, "w") as f:
             for doi, atomtypes in unique_references.items():
-                url = "http://api.crossref.org/works/{}/transform/application/x-bibtex".format(
-                    doi
-                )
+                url = f"http://api.crossref.org/works/{doi}/transform/application/x-bibtex"
                 headers = {"accept": "application/x-bibtex"}
                 bibtex_ref = get_ref(url, headers=headers)
                 if bibtex_ref is None:
-                    logger.info("Could not get ref for doi {}".format(doi))
+                    logger.info(f"Could not get ref for doi {doi}")
                     continue
                 else:
                     bibtex_text = bibtex_ref.text
@@ -1249,7 +1226,7 @@ class Forcefield(app.ForceField):
                     + "}"
                 )
                 bibtex_text = bibtex_text[:-2] + note + bibtex_text[-2:]
-                f.write("{}\n".format(bibtex_text))
+                f.write(f"{bibtex_text}\n")
 
     def get_parameters(self, group, key, keys_are_atom_classes=False):
         """Get parameters for a specific group of Forces in this Forcefield.

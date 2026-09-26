@@ -97,7 +97,7 @@ def find_atomtypes(structure, forcefield, max_iter=10):
     rules = _load_rules(atomtype_rules, typemap)
 
     # Only consider rules for elements found in topology
-    subrules = dict()
+    subrules = {}
 
     system_elements = set()
     for _, atom_data in topology_graph.atoms(data=True):
@@ -116,8 +116,8 @@ def find_atomtypes(structure, forcefield, max_iter=10):
                 system_elements.add(element_from_num)
             except ElementError:
                 raise FoyerError(
-                    "Parsed atom {} as having neither an element "
-                    "nor non-element type.".format(name)
+                    f"Parsed atom {name} as having neither an element "
+                    "nor non-element type."
                 )
             except AssertionError:
                 raise FoyerError(
@@ -152,7 +152,7 @@ def find_atomtypes(structure, forcefield, max_iter=10):
 
 def _load_rules(rules_provider, typemap):
     """Load atomtyping rules from a AtomTypingRulesProvider into SMARTSGraphs."""
-    rules = dict()
+    rules = {}
     # For every SMARTS string in the force field,
     # create a SMARTSGraph object
     for rule_name, smarts in rules_provider.atomtype_definitions.items():
@@ -215,13 +215,9 @@ def _resolve_atomtypes(topology_graph, typemap):
             atom["atomtype"] = atomtype[0]
         elif len(atomtype) > 1:
             raise FoyerError(
-                "Found multiple types for atom {} ({}): {}.".format(
-                    atom_id, atoms[atom_id].atomic_number, atomtype
-                )
+                f"Found multiple types for atom {atom_id} ({atoms[atom_id].atomic_number}): {atomtype}."
             )
         else:
             raise FoyerError(
-                "Found no types for atom numbered {} which is atomic number {}. Forcefield file is missing this atomtype, so try to add SMARTS definitions to account for this atom.".format(
-                    atom_id, atoms[atom_id].atomic_number
-                )
+                f"Found no types for atom numbered {atom_id} which is atomic number {atoms[atom_id].atomic_number}. Forcefield file is missing this atomtype, so try to add SMARTS definitions to account for this atom."
             )

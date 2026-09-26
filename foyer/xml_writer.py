@@ -1,7 +1,5 @@
 """Write foyer XMLs from a parametrized structure."""
 
-from __future__ import division
-
 import collections
 import logging
 
@@ -10,6 +8,7 @@ import numpy as np
 import parmed as pmd
 from lxml import etree as ET
 
+from foyer.exceptions import MissingParametersError
 from foyer.smarts_graph import SMARTSGraph
 
 logger = logging.getLogger(__name__)
@@ -67,7 +66,9 @@ def write_foyer(
     # Assume if a Structure has a bond and bond type that the Structure is
     # parameterized. ParmEd uses the same logic to denote parameterization.
     if not (len(self.bonds) > 0 and self.bonds[0].type is not None):
-        raise Exception("Cannot write Foyer XML from an unparametrized Structure.")
+        raise MissingParametersError(
+            "Cannot write Foyer XML from an unparametrized Structure."
+        )
 
     root = ET.Element("ForceField")
     # Write Forcefield information
@@ -116,7 +117,7 @@ def _write_atoms(self, root, atoms, forcefield, unique):
             ("overrides", "forcefield.atomTypeOverrides[name]"),
         ]
     )
-    atom_type_set = set([atom.atom_type.name for atom in atoms])
+    atom_type_set = {atom.atom_type.name for atom in atoms}
     for atom in atoms:
         atomtype = ET.SubElement(atomtypes, "Type")
         nb_force = ET.SubElement(nonbonded, "Atom")
@@ -171,7 +172,7 @@ def _write_atoms(self, root, atoms, forcefield, unique):
 def _update_defs(atomtypes, nonbonded, forcefield):
     def_list = [i.get("def") for i in atomtypes.iterchildren()]
     name_list = [i.get("name") for i in atomtypes.iterchildren()]
-    smarts_list = list()
+    smarts_list = []
     smarts_parser = forcefield.parser
     for smarts_string, name in zip(def_list, name_list):
         smarts_graph = SMARTSGraph(smarts_string, parser=smarts_parser, name=name)
@@ -209,7 +210,7 @@ def _write_bonds(root, bonds, unique):
             bond_force.set("id1", str(bond.atom1.idx))
             bond_force.set("id2", str(bond.atom2.idx))
         for id in range(2):
-            bond_force.set("type{}".format(id + 1), atypes[id])
+            bond_force.set(f"type{id + 1}", atypes[id])
         bond_force.set("length", str(round(bond.type.req / 10, 4)))
         bond_force.set("k", str(round(bond.type.k * 4.184 * 200, 1)))
 
@@ -229,7 +230,7 @@ def _write_angles(root, angles, unique):
             angle_force.set("id2", str(angle.atom2.idx))
             angle_force.set("id3", str(angle.atom3.idx))
         for id in range(3):
-            angle_force.set("type{}".format(id + 1), atypes[id])
+            angle_force.set(f"type{id + 1}", atypes[id])
         angle_force.set("angle", str(round(angle.type.theteq * (np.pi / 180), 10)))
         angle_force.set("k", str(round(angle.type.k * 4.184 * 2, 3)))
 
@@ -273,7 +274,7 @@ def _write_periodic_torsions(root, dihedrals, unique):
                 dihedral_force.set("id3", str(dihedral.atom3.idx))
                 dihedral_force.set("id4", str(dihedral.atom4.idx))
         for id in range(4):
-            dihedral_force.set("type{}".format(id + 1), atypes[id])
+            dihedral_force.set(f"type{id + 1}", atypes[id])
         dihedral_force.set("periodicity1", str(dihedral.type.per))
         dihedral_force.set("phase1", str(round(dihedral.type.phase * (np.pi / 180), 8)))
         dihedral_force.set("k1", str(round(dihedral.type.phi_k * 4.184, 3)))
@@ -301,17 +302,15 @@ def _write_periodic_torsions(root, dihedrals, unique):
                 # Merge the last and current dihedral forces
                 # Find the nth periodicity we can set
                 n = 1
-                while "periodicity{}".format(n) in last_dihedral_force.attrib:
+                while f"periodicity{n}" in last_dihedral_force.attrib:
                     n += 1
-                last_dihedral_force.attrib["periodicity{}".format(n)] = (
-                    dihedral_force.attrib["periodicity1"]
-                )
-                last_dihedral_force.attrib["phase{}".format(n)] = dihedral_force.attrib[
+                last_dihedral_force.attrib[f"periodicity{n}"] = dihedral_force.attrib[
+                    "periodicity1"
+                ]
+                last_dihedral_force.attrib[f"phase{n}"] = dihedral_force.attrib[
                     "phase1"
                 ]
-                last_dihedral_force.attrib["k{}".format(n)] = dihedral_force.attrib[
-                    "k1"
-                ]
+                last_dihedral_force.attrib[f"k{n}"] = dihedral_force.attrib["k1"]
                 periodic_torsion_forces.remove(dihedral_force)
             else:
                 last_dihedral_force = dihedral_force
@@ -333,23 +332,20 @@ def _unique_periodictorsion_parameters(dihedral1, dihedral2):
     """
     n = 1
     param_tuples = set()
-    while "periodicity{}".format(n) in dihedral1.attrib:
+    while f"periodicity{n}" in dihedral1.attrib:
         param_tuples.add(
             (
-                dihedral1.attrib["periodicity{}".format(n)],
-                dihedral1.attrib["phase{}".format(n)],
-                dihedral1.attrib["k{}".format(n)],
+                dihedral1.attrib[f"periodicity{n}"],
+                dihedral1.attrib[f"phase{n}"],
+                dihedral1.attrib[f"k{n}"],
             )
         )
         n += 1
-    if (
+    return (
         dihedral2.attrib["periodicity1"],
         dihedral2.attrib["phase1"],
         dihedral2.attrib["k1"],
-    ) in param_tuples:
-        return False
-    else:
-        return True
+    ) not in param_tuples
 
 
 def _write_rb_torsions(root, rb_torsions, unique):
@@ -374,11 +370,11 @@ def _write_rb_torsions(root, rb_torsions, unique):
             rb_torsion_force.set("id3", str(rb_torsion.atom3.idx))
             rb_torsion_force.set("id4", str(rb_torsion.atom4.idx))
         for id in range(4):
-            rb_torsion_force.set("type{}".format(id + 1), atypes[id])
+            rb_torsion_force.set(f"type{id + 1}", atypes[id])
         for c_id in range(6):
             rb_torsion_force.set(
-                "c{}".format(c_id),
-                str(round(getattr(rb_torsion.type, "c{}".format(c_id)) * 4.184, 4)),
+                f"c{c_id}",
+                str(round(getattr(rb_torsion.type, f"c{c_id}") * 4.184, 4)),
             )
 
 
@@ -427,7 +423,7 @@ def _elements_equal(e1, e2):
         return False
     if len(e1) != len(e2):
         return False
-    return all([_elements_equal(c1, c2) for c1, c2 in zip(e1, e2)])
+    return all(_elements_equal(c1, c2) for c1, c2 in zip(e1, e2))
 
 
 def _infer_coulomb14scale(struct):
@@ -448,7 +444,7 @@ def _infer_coulomb14scale(struct):
 
 def _infer_lj14scale(struct, combining_rule: str):
     """Infer the Lennard-Jones 1-4 scaling factor in the structure."""
-    lj14scale = list()
+    lj14scale = []
 
     if struct.defaults:
         return struct.defaults.fudgeLJ
@@ -465,9 +461,9 @@ def _infer_lj14scale(struct, combining_rule: str):
         # We expect sigmas to be the same but epsilons to be scaled by a factor
         if not np.isclose(adj.type.sigma, expected_sigma):
             raise ValueError(
-                "Unexpected 1-4 sigma value found in adj {}. Expected {}"
-                "and found {}. This estimate was made assuming a combining "
-                "rule of {}".format(adj, adj.type.sigma, expected_sigma, combining_rule)
+                f"Unexpected 1-4 sigma value found in adj {adj}. Expected {adj.type.sigma}"
+                f"and found {expected_sigma}. This estimate was made assuming a combining "
+                f"rule of {combining_rule}"
             )
 
         lj14scale.append(adj.type.epsilon / expected_epsilon)
@@ -479,5 +475,5 @@ def _infer_lj14scale(struct, combining_rule: str):
         raise ValueError(
             "Structure has inconsistent 1-4 LJ scaling factors. This is "
             "currently not supported. Found these factors: "
-            "{}".format(unique_lj14_scales)
+            f"{unique_lj14_scales}"
         )

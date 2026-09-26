@@ -1,7 +1,7 @@
 import glob
-import importlib.resources as resources
 import itertools as it
 import os
+from importlib import resources
 
 import parmed as pmd
 import pytest
@@ -34,21 +34,21 @@ class TestTraPPE(BaseTest):
         with open(self.implemented_tests_path, "a") as fh:
             for mol_path in it.chain(self.mol2_files):
                 _, mol_file = os.path.split(mol_path)
-                mol_name, ext = os.path.splitext(mol_file)
+                mol_name, _ext = os.path.splitext(mol_file)
                 try:
                     self.test_atomtyping(mol_name)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     print(e)
                     continue
                 else:
                     if mol_name not in self.correctly_implemented:
-                        fh.write("{}\n".format(mol_name))
+                        fh.write(f"{mol_name}\n")
 
     @pytest.mark.parametrize("mol_name", correctly_implemented)
     def test_atomtyping(self, mol_name, testfiles_dir=TRAPPE_TESTFILES_DIR):
         files = glob.glob(os.path.join(testfiles_dir, mol_name, "*"))
         for mol_file in files:
-            _, ext = os.path.splitext(mol_file)
+            _, _ext = os.path.splitext(mol_file)
             mol2_path = os.path.join(testfiles_dir, mol_name, mol_file)
             structure = pmd.load_file(mol2_path, structure=True)
             atomtype(structure, TRAPPE_UA)

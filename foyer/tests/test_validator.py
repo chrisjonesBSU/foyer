@@ -1,7 +1,7 @@
 import glob
-import importlib.resources as resources
 import logging
 import os
+from importlib import resources
 
 import pytest
 from lxml.etree import DocumentInvalid, XMLSyntaxError
@@ -38,7 +38,7 @@ class TestValidator(BaseTest):
                 Validator(ff_file)
             assert "You have empty smart definition(s)" in caplog.text
         elif file_name.startswith("gmso"):
-            with pytest.raises(Exception):
+            with pytest.raises(DocumentInvalid):
                 Validator(ff_file)
         else:
             Validator(ff_file)

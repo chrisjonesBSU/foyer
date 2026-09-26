@@ -2,7 +2,9 @@
 
 from lxml import etree
 
-root = etree.fromstring(open("oplsaa_with_silica.xml", "r").read())
+with open("oplsaa_with_silica.xml", "r") as f:
+    root = etree.fromstring(f.read())
+
 atomtypes = root[0]
 bondforce = root[1]
 anglforce = root[2]

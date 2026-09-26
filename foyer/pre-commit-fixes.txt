@@ -1,0 +1,120 @@
+ruff (legacy alias)......................................................[41mFailed[m
+[2m- hook id: ruff[m
+[2m- exit code: 1[m
+
+[1m[91mTRY002[0m[1m Create your own exception[0m
+   [1m[94m--> [0mfoyer/forcefield.py:339:15
+    [1m[94m|[0m
+[1m[94m337[0m [1m[94m|[0m     """
+[1m[94m338[0m [1m[94m|[0m     if error:
+[1m[94m339[0m [1m[94m|[0m         raise Exception(msg)
+    [1m[94m|[0m               [1m[91m^^^^^^^^^^^^^^[0m
+[1m[94m340[0m [1m[94m|[0m     else:
+[1m[94m341[0m [1m[94m|[0m         logger.warning(msg)
+    [1m[94m|[0m
+
+[1m[91mPERF402[0m[1m Use `list` or `list.copy` to create a copy of a list[0m
+   [1m[94m--> [0mfoyer/forcefield.py:495:21
+    [1m[94m|[0m
+[1m[94m493[0m [1m[94m|[0m             if isinstance(forcefield_files, (list, tuple, set)):
+[1m[94m494[0m [1m[94m|[0m                 for file in forcefield_files:
+[1m[94m495[0m [1m[94m|[0m                     all_files_to_load.append(file)
+    [1m[94m|[0m                     [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m496[0m [1m[94m|[0m             else:
+[1m[94m497[0m [1m[94m|[0m                 all_files_to_load.append(forcefield_files)
+    [1m[94m|[0m
+
+[1m[91mTRY002[0m[1m Create your own exception[0m
+   [1m[94m--> [0mfoyer/forcefield.py:961:23
+    [1m[94m|[0m
+[1m[94m959[0m [1m[94m|[0m             # Look up the atom type name, returning a helpful error message if it cannot be found.
+[1m[94m960[0m [1m[94m|[0m             if atom not in data.atomType:
+[1m[94m961[0m [1m[94m|[0m                 raise Exception(f"Could not identify atom type for atom '{atom!s}'.")
+    [1m[94m|[0m                       [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m962[0m [1m[94m|[0m             typename = data.atomType[atom]
+    [1m[94m|[0m
+
+[1m[91mTRY002[0m[1m Create your own exception[0m
+   [1m[94m--> [0mfoyer/forcefield.py:968:23
+    [1m[94m|[0m
+[1m[94m966[0m [1m[94m|[0m                 msg = f"Could not find typename '{typename}' for atom '{atom!s}' in list of known atom types.\n"
+[1m[94m967[0m [1m[94m|[0m                 msg += f"Known atom types are: {self._atomTypes.keys()!s}"
+[1m[94m968[0m [1m[94m|[0m                 raise Exception(msg)
+    [1m[94m|[0m                       [1m[91m^^^^^^^^^^^^^^[0m
+[1m[94m969[0m [1m[94m|[0m
+[1m[94m970[0m [1m[94m|[0m             # Add the particle to the OpenMM system.
+    [1m[94m|[0m
+
+[1m[91mB017[0m[1m Do not assert blind exception: `Exception`[0m
+   [1m[94m--> [0mfoyer/tests/test_forcefield.py:391:14
+    [1m[94m|[0m
+[1m[94m389[0m [1m[94m|[0m         ethane = mb.load(get_fn("ethane.mol2"))
+[1m[94m390[0m [1m[94m|[0m         oplsaa_with_typo = Forcefield(forcefield_files=get_fn(ff_filename))
+[1m[94m391[0m [1m[94m|[0m         with pytest.raises(Exception):
+    [1m[94m|[0m              [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m392[0m [1m[94m|[0m             ethane = oplsaa_with_typo.apply(ethane)
+[1m[94m393[0m [1m[94m|[0m         with caplog.at_level(logging.INFO, logger="foyer"):
+    [1m[94m|[0m
+
+[1m[91mB017[0m[1m Do not assert blind exception: `Exception`[0m
+   [1m[94m--> [0mfoyer/tests/test_forcefield.py:443:14
+    [1m[94m|[0m
+[1m[94m441[0m [1m[94m|[0m         derponium.add_bond((at2, at3))
+[1m[94m442[0m [1m[94m|[0m
+[1m[94m443[0m [1m[94m|[0m         with pytest.raises(Exception):
+    [1m[94m|[0m              [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m444[0m [1m[94m|[0m             ff.apply(derponium)
+[1m[94m445[0m [1m[94m|[0m         thing = ff.apply(derponium, assert_bond_params=False, assert_angle_params=False)
+    [1m[94m|[0m
+
+[1m[91mBLE001[0m[1m Do not catch blind exception: `Exception`[0m
+  [1m[94m--> [0mfoyer/tests/test_opls.py:39:24
+   [1m[94m|[0m
+[1m[94m37[0m [1m[94m|[0m                 try:
+[1m[94m38[0m [1m[94m|[0m                     self.test_atomtyping(mol_name)
+[1m[94m39[0m [1m[94m|[0m                 except Exception as e:
+   [1m[94m|[0m                        [1m[91m^^^^^^^^^[0m
+[1m[94m40[0m [1m[94m|[0m                     print(e)
+[1m[94m41[0m [1m[94m|[0m                     continue
+   [1m[94m|[0m
+
+[1m[91mBLE001[0m[1m Do not catch blind exception: `Exception`[0m
+  [1m[94m--> [0mfoyer/tests/test_trappe.py:40:24
+   [1m[94m|[0m
+[1m[94m38[0m [1m[94m|[0m                 try:
+[1m[94m39[0m [1m[94m|[0m                     self.test_atomtyping(mol_name)
+[1m[94m40[0m [1m[94m|[0m                 except Exception as e:
+   [1m[94m|[0m                        [1m[91m^^^^^^^^^[0m
+[1m[94m41[0m [1m[94m|[0m                     print(e)
+[1m[94m42[0m [1m[94m|[0m                     continue
+   [1m[94m|[0m
+
+[1m[91mB017[0m[1m Do not assert blind exception: `Exception`[0m
+  [1m[94m--> [0mfoyer/tests/test_validator.py:41:18
+   [1m[94m|[0m
+[1m[94m39[0m [1m[94m|[0m             assert "You have empty smart definition(s)" in caplog.text
+[1m[94m40[0m [1m[94m|[0m         elif file_name.startswith("gmso"):
+[1m[94m41[0m [1m[94m|[0m             with pytest.raises(Exception):
+   [1m[94m|[0m                  [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m42[0m [1m[94m|[0m                 Validator(ff_file)
+[1m[94m43[0m [1m[94m|[0m         else:
+   [1m[94m|[0m
+
+[1m[91mTRY002[0m[1m Create your own exception[0m
+  [1m[94m--> [0mfoyer/xml_writer.py:68:15
+   [1m[94m|[0m
+[1m[94m66[0m [1m[94m|[0m     # parameterized. ParmEd uses the same logic to denote parameterization.
+[1m[94m67[0m [1m[94m|[0m     if not (len(self.bonds) > 0 and self.bonds[0].type is not None):
+[1m[94m68[0m [1m[94m|[0m         raise Exception("Cannot write Foyer XML from an unparametrized Structure.")
+   [1m[94m|[0m               [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m69[0m [1m[94m|[0m
+[1m[94m70[0m [1m[94m|[0m     root = ET.Element("ForceField")
+   [1m[94m|[0m
+
+Found 10 errors.
+
+ruff format..............................................................[42mPassed[m
+check yaml...............................................................[42mPassed[m
+fix end of files.........................................................[42mPassed[m
+trim trailing whitespace.................................................[42mPassed[m
+isort (python)...........................................................[42mPassed[m

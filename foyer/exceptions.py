@@ -13,7 +13,7 @@ class ValidationError(FoyerError):
     """Raised when validating .xml forcefield files."""
 
     def __init__(self, message, source, line):
-        super(ValidationError, self).__init__(message)
+        super().__init__(message)
         self.source = source
         self.line = line
 
@@ -35,11 +35,13 @@ class MultipleValidationError(FoyerError):
 class ValidationWarning(FoyerWarning):
     """Raised when validating .xml forcefield files."""
 
-    pass
-
 
 class MissingParametersError(FoyerError):
     """Error to be raised when parameters are missing from the forcefield."""
+
+
+class UnknownAtomTypeError(FoyerError):
+    """Error to be raised when an atom's type cannot be determined or is unregistered."""
 
 
 class MissingForceError(FoyerError):
